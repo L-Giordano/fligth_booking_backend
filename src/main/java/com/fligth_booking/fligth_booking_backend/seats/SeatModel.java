@@ -1,5 +1,6 @@
 package com.fligth_booking.fligth_booking_backend.seats;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fligth_booking.fligth_booking_backend.flights.FlightModel;
 import jakarta.persistence.*;
 import lombok.EqualsAndHashCode;
@@ -23,11 +24,9 @@ public class SeatModel {
     private String col;
 
     @Column(nullable = false)
-    private Integer order_num;
-
-    @Column(nullable = false)
     private Boolean status;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "flight_id")
     private FlightModel flight;
