@@ -6,6 +6,9 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -20,35 +23,29 @@ public class FlightModel {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false)
+    private String airline;
+
+    @Column(nullable = false)
+    private String flightCode;
+
     @OneToMany(mappedBy = "flight", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<SeatModel> seats = new ArrayList<>();
 
     @Column(nullable = false)
-    private Date departure;
+    private ZonedDateTime departure;
 
     @Column(nullable = false)
-    private Date arrival;
+    private LocalDate departureDate;
 
     @Column(nullable = false)
-    private String originCity;
+    private ZonedDateTime arrival;
 
     @Column(nullable = false)
-    private String originCountry;
-
-    @Column(nullable = false)
-    private String originAirport;
+    private LocalDate arrivalDate;
 
     @Column(nullable = false)
     private String originAirportCode;
-
-    @Column(nullable = false)
-    private String destinationCity;
-
-    @Column(nullable = false)
-    private String destinationCountry;
-
-    @Column(nullable = false)
-    private String destinationAirport;
 
     @Column(nullable = false)
     private String destinationAirportCode;
