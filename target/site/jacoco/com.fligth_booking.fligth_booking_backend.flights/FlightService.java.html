@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FlightService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">backend</a> &gt; <a href="index.source.html" class="el_package">com.fligth_booking.fligth_booking_backend.flights</a> &gt; <span class="el_source">FlightService.java</span></div><h1>FlightService.java</h1><pre class="source lang-java linenums">package com.fligth_booking.fligth_booking_backend.flights;
+
+import com.fligth_booking.fligth_booking_backend.exceptions.FlightIdNotFoundException;
+import com.fligth_booking.fligth_booking_backend.exceptions.InvalidSeatKeyPatternException;
+import com.fligth_booking.fligth_booking_backend.flights.flightDTOs.CreateFlightDTO;
+import com.fligth_booking.fligth_booking_backend.flights.flightDTOs.FlightBasicInfoDTO;
+import com.fligth_booking.fligth_booking_backend.seats.SeatModel;
+import com.fligth_booking.fligth_booking_backend.seats.SeatService;
+import com.fligth_booking.fligth_booking_backend.seats.SeatStatus;
+import com.fligth_booking.fligth_booking_backend.seats.SeatType;
+import lombok.extern.slf4j.Slf4j;
+import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import org.springframework.data.domain.Pageable;
+
+import java.net.URI;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+
+@Service
+<span class="nc" id="L29">@Slf4j</span>
+<span class="nc" id="L30">public class FlightService {</span>
+
+    @Autowired
+    FlightRepository flightRepository;
+
+    @Autowired
+    ModelMapper modelMapper;
+
+    @Autowired
+    SeatService seatService;
+
+    public List&lt;FlightBasicInfoDTO&gt; allActiveFlights(){
+<span class="nc" id="L42">        List&lt;FlightBasicInfoDTO&gt; flightBasicInfoDTOList = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L43">        List&lt;FlightModel&gt; entities = flightRepository.findAllByStatusAndDepartureDateIsGreaterThan(Boolean.TRUE, LocalDate.now());</span>
+<span class="nc bnc" id="L44" title="All 2 branches missed.">        if (entities.isEmpty()){</span>
+<span class="nc" id="L45">            return flightBasicInfoDTOList;</span>
+        }
+<span class="nc bnc" id="L47" title="All 2 branches missed.">        for (FlightModel flight: entities</span>
+        ) {
+<span class="nc" id="L49">            flightBasicInfoDTOList.add(modelMapper.map(flight, FlightBasicInfoDTO.class));</span>
+<span class="nc" id="L50">        }</span>
+<span class="nc" id="L51">        return flightBasicInfoDTOList;</span>
+    }
+
+    public FlightBasicInfoDTO getActiveFlightById(Long id) throws FlightIdNotFoundException {
+<span class="nc" id="L55">        Optional&lt;FlightModel&gt; flightOptional = flightRepository.findByIdAndStatus(id, Boolean.TRUE);</span>
+<span class="nc bnc" id="L56" title="All 2 branches missed.">        if(flightOptional.isEmpty()){</span>
+<span class="nc" id="L57">            throw new FlightIdNotFoundException(String.format(&quot;User Id %s not Found&quot;, id));</span>
+        }
+<span class="nc" id="L59">        return modelMapper.map(flightOptional.get(), FlightBasicInfoDTO.class);</span>
+    }
+
+    @Transactional
+    public URI createFlight(CreateFlightDTO createFlightDTO){
+<span class="nc" id="L64">        FlightModel flightModel = modelMapper.map(createFlightDTO, FlightModel.class);</span>
+<span class="nc" id="L65">        flightModel.setDeparture(this.createZoneDateTime(createFlightDTO.getDeparture()));</span>
+<span class="nc" id="L66">        flightModel.setArrival(this.createZoneDateTime(createFlightDTO.getArrival()));</span>
+<span class="nc" id="L67">        flightModel.setStatus(Boolean.TRUE);</span>
+<span class="nc" id="L68">        flightModel.setDepartureDate(flightModel.getDeparture().toLocalDate());</span>
+<span class="nc" id="L69">        flightModel.setArrivalDate(flightModel.getArrival().toLocalDate());</span>
+<span class="nc" id="L70">        flightModel.setFlightCode(this.createFlightCode(flightModel.getAirline()));</span>
+<span class="nc" id="L71">        flightRepository.save(flightModel);</span>
+<span class="nc" id="L72">        return ServletUriComponentsBuilder.fromCurrentRequest()</span>
+<span class="nc" id="L73">                .path(&quot;/{id}&quot;)</span>
+<span class="nc" id="L74">                .buildAndExpand(flightModel.getId())</span>
+<span class="nc" id="L75">                .toUri();</span>
+    }
+
+    public ZonedDateTime createZoneDateTime(String date){
+<span class="nc" id="L79">        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(&quot;yyyy, MM, dd, HH, mm, ss, SS, zzz&quot;);</span>
+<span class="nc" id="L80">        ZonedDateTime zonedDateTime = ZonedDateTime.parse(date, formatter);</span>
+<span class="nc" id="L81">        return zonedDateTime.withZoneSameInstant(ZoneOffset.UTC);</span>
+
+    }
+
+    public String createFlightCode(String airline){
+<span class="nc" id="L86">        Random random = new Random();</span>
+<span class="nc" id="L87">        StringBuilder builder = new StringBuilder();</span>
+<span class="nc bnc" id="L88" title="All 2 branches missed.">        for (int i = 0; i &lt; 5; i++) {</span>
+<span class="nc" id="L89">            int randomValue = random.nextInt(26);</span>
+<span class="nc" id="L90">            char randomLetter = (char) (randomValue + 65);</span>
+<span class="nc" id="L91">            builder.append(randomLetter);</span>
+        }
+
+<span class="nc" id="L94">        String airlineName = airline.replaceAll(&quot; &quot;,&quot;&quot;).toUpperCase();</span>
+<span class="nc" id="L95">        return airlineName +&quot;-&quot;+ builder;</span>
+    }
+
+    public Page&lt;FlightModel&gt; allFlightsByDepartureArrival(
+            Integer pageNum,
+            Integer pageSize,
+            String originAirportCode,
+            String destinationAirportCode,
+            LocalDate departure,
+            LocalDate arrival,
+            Boolean status){
+<span class="nc" id="L106">        Pageable paging = PageRequest.of(pageNum, pageSize);</span>
+<span class="nc" id="L107">        return flightRepository.findFlightsByDepartureArrivalOriginDestination(</span>
+                originAirportCode,
+                destinationAirportCode,
+                departure,
+                arrival,
+                status,
+                paging);
+    }
+
+    public List&lt;SeatModel&gt; allSeats(Long id) throws FlightIdNotFoundException {
+<span class="nc" id="L117">        Optional&lt;FlightModel&gt; flightOptional = flightRepository.findById(id);</span>
+<span class="nc bnc" id="L118" title="All 2 branches missed.">        if(flightOptional.isEmpty()){</span>
+<span class="nc" id="L119">            throw new FlightIdNotFoundException(String.format(&quot;Flight Id %s not Found&quot;, id));</span>
+        }
+
+<span class="nc" id="L122">        FlightModel flight = flightOptional.get();</span>
+
+<span class="nc" id="L124">        return flight.getSeats();</span>
+    }
+
+    public void updateFlight(FlightModel flightModel) throws FlightIdNotFoundException {
+<span class="nc" id="L128">        Optional&lt;FlightModel&gt; response = flightRepository.findById(flightModel.getId());</span>
+<span class="nc bnc" id="L129" title="All 2 branches missed.">        if(response.isEmpty()){</span>
+<span class="nc" id="L130">            throw new FlightIdNotFoundException(String.format(&quot;Flight Id %s not Found&quot;, flightModel.getId()));</span>
+        }
+<span class="nc" id="L132">        flightRepository.save(flightModel);</span>
+<span class="nc" id="L133">    }</span>
+
+    public void deleteFlight(Long id) throws FlightIdNotFoundException {
+        //TODO:cancelar reserva
+<span class="nc" id="L137">        Optional&lt;FlightModel&gt; responseOptional = flightRepository.findById(id);</span>
+<span class="nc bnc" id="L138" title="All 2 branches missed.">        if(responseOptional.isEmpty()){</span>
+<span class="nc" id="L139">            throw new FlightIdNotFoundException(String.format(&quot;Flight Id %s not Found&quot;, id));</span>
+        }
+<span class="nc" id="L141">        FlightModel flightModel = responseOptional.get();</span>
+        //TODO:It might be a good idea to check if the user has active bookings before deactivate it
+<span class="nc" id="L143">        flightModel.setStatus(Boolean.FALSE);</span>
+<span class="nc" id="L144">        flightRepository.save(flightModel);</span>
+<span class="nc" id="L145">    }</span>
+
+    public void createSeats(Long id, HashMap&lt;String, ArrayList&lt;String&gt;&gt; seats) throws FlightIdNotFoundException, InvalidSeatKeyPatternException {
+
+<span class="nc" id="L149">        Optional&lt;FlightModel&gt; flightoptional = flightRepository.findById(id);</span>
+<span class="nc bnc" id="L150" title="All 2 branches missed.">        if(flightoptional.isEmpty()){</span>
+<span class="nc" id="L151">            throw new FlightIdNotFoundException(String.format(&quot;Flight Id %s not Found&quot;, id));</span>
+        }
+<span class="nc" id="L153">        FlightModel flight = flightoptional.get();</span>
+
+<span class="nc bnc" id="L155" title="All 2 branches missed.">        for (Map.Entry&lt;String, ArrayList&lt;String&gt;&gt; entry : seats.entrySet()) {</span>
+<span class="nc" id="L156">            String seatPosition = entry.getKey();</span>
+<span class="nc bnc" id="L157" title="All 2 branches missed.">            if(!isValidateKeyPattern(seatPosition)){</span>
+<span class="nc" id="L158">                throw new InvalidSeatKeyPatternException(&quot;The key pattern is invalid. It must be ^[A-Z]+-\\d+-[A-Z\\s]+$&quot;);</span>
+            }
+<span class="nc" id="L160">            Float price = Float.parseFloat(entry.getValue().get(1));</span>
+<span class="nc" id="L161">            SeatType seatType = SeatType.valueOf(entry.getValue().get(0));</span>
+<span class="nc" id="L162">            String col = seatPosition.replaceAll(&quot;[^\\d.]&quot;, &quot;&quot;);</span>
+<span class="nc" id="L163">            String row = seatPosition.replaceAll(&quot;[\\d.]&quot;, &quot;&quot;);</span>
+
+<span class="nc" id="L165">            SeatModel seat = new SeatModel();</span>
+<span class="nc" id="L166">            seat.setCol(col);</span>
+<span class="nc" id="L167">            seat.setRow(row);</span>
+<span class="nc" id="L168">            seat.setFlight(flight);</span>
+<span class="nc" id="L169">            seat.setSeatType(seatType);</span>
+<span class="nc" id="L170">            seat.setSeatStatus(SeatStatus.EMPTY);</span>
+<span class="nc" id="L171">            seat.setStatus(true);</span>
+<span class="nc" id="L172">            seat.setPrice(price);</span>
+<span class="nc" id="L173">            seatService.createSeat(seat);</span>
+<span class="nc" id="L174">        }</span>
+<span class="nc" id="L175">    }</span>
+
+    public Boolean isValidateKeyPattern(String key){
+<span class="nc" id="L178">        String pattern = &quot;^[A-Z]+\\d+$&quot;;</span>
+<span class="nc" id="L179">        return key.matches(pattern);</span>
+    }
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

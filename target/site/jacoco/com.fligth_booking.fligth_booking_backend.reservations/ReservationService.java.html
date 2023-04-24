@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReservationService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">backend</a> &gt; <a href="index.source.html" class="el_package">com.fligth_booking.fligth_booking_backend.reservations</a> &gt; <span class="el_source">ReservationService.java</span></div><h1>ReservationService.java</h1><pre class="source lang-java linenums">package com.fligth_booking.fligth_booking_backend.reservations;
+
+import com.fligth_booking.fligth_booking_backend.exceptions.OccupiedSeatException;
+import com.fligth_booking.fligth_booking_backend.exceptions.ReservationNotFoundException;
+import com.fligth_booking.fligth_booking_backend.exceptions.SeatNoFoundException;
+import com.fligth_booking.fligth_booking_backend.flights.FlightModel;
+import com.fligth_booking.fligth_booking_backend.reservations.reservationsDTOs.ReservationInfoDto;
+import com.fligth_booking.fligth_booking_backend.seats.SeatModel;
+import com.fligth_booking.fligth_booking_backend.seats.SeatService;
+import lombok.extern.slf4j.Slf4j;
+import org.modelmapper.ModelMapper;
+import org.modelmapper.convention.MatchingStrategies;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+import java.net.URI;
+import java.time.ZonedDateTime;
+import java.util.*;
+
+@Service
+<span class="nc" id="L23">@Slf4j</span>
+<span class="nc" id="L24">public class ReservationService {</span>
+
+    @Autowired
+    ReservationRepository reservationRepository;
+
+    @Autowired
+    SeatService seatService;
+
+    @Transactional
+    public URI createReservation(ReservationModel reservationModel) throws SeatNoFoundException, OccupiedSeatException {
+<span class="nc" id="L34">        reservationModel.setStatus(Boolean.TRUE);</span>
+<span class="nc" id="L35">        reservationModel.setReservationStatus(ReservationStatus.ACTIVE);</span>
+<span class="nc" id="L36">        reservationModel.setBookingDate(ZonedDateTime.now());</span>
+        while (true){
+<span class="nc" id="L38">            String reservationCode = this.createReservationCode();</span>
+<span class="nc bnc" id="L39" title="All 2 branches missed.">            if (reservationRepository.findByReservationCode(reservationCode).isEmpty()){</span>
+<span class="nc" id="L40">                reservationModel.setReservationCode(reservationCode);</span>
+<span class="nc" id="L41">                break;</span>
+            }
+<span class="nc" id="L43">        }</span>
+<span class="nc" id="L44">        seatService.reserveSeat(reservationModel.getSeat().getId());</span>
+<span class="nc" id="L45">        reservationRepository.save(reservationModel);</span>
+
+<span class="nc" id="L47">        return ServletUriComponentsBuilder.fromCurrentRequest()</span>
+<span class="nc" id="L48">            .path(&quot;/{id}&quot;)</span>
+<span class="nc" id="L49">            .buildAndExpand(reservationModel.getId())</span>
+<span class="nc" id="L50">            .toUri();</span>
+    }
+
+    public String createReservationCode(){
+<span class="nc" id="L54">        Random random = new Random();</span>
+<span class="nc" id="L55">        StringBuilder builder = new StringBuilder();</span>
+<span class="nc bnc" id="L56" title="All 2 branches missed.">        for (int i = 0; i &lt; 5; i++) {</span>
+<span class="nc" id="L57">            int randomValue = random.nextInt(26);</span>
+<span class="nc" id="L58">            char randomLetter = (char) (randomValue + 65);</span>
+<span class="nc" id="L59">            builder.append(randomLetter);</span>
+        }
+<span class="nc" id="L61">        return String.valueOf(builder);</span>
+    }
+
+    public ReservationInfoDto getReservationByCode(Long id, String reservationCode) throws ReservationNotFoundException {
+<span class="nc" id="L65">        Optional&lt;ReservationModel&gt; reservationOptional = reservationRepository.findByReservationCodeAndUserId(reservationCode, id);</span>
+<span class="nc bnc" id="L66" title="All 2 branches missed.">        if(reservationOptional.isEmpty()){</span>
+<span class="nc" id="L67">            throw new ReservationNotFoundException(String.format(&quot;Reservation %s not found for the id %s&quot;, reservationCode, id));</span>
+        }
+<span class="nc" id="L69">        ReservationModel reservation = reservationOptional.get();</span>
+<span class="nc" id="L70">        SeatModel seat = reservation.getSeat();</span>
+<span class="nc" id="L71">        FlightModel flight = seat.getFlight();</span>
+
+<span class="nc" id="L73">        ReservationInfoDto response = new ReservationInfoDto();</span>
+<span class="nc" id="L74">        ModelMapper modelMapper = new ModelMapper();</span>
+<span class="nc" id="L75">        modelMapper.map(flight, response);</span>
+<span class="nc" id="L76">        modelMapper.map(seat, response);</span>
+<span class="nc" id="L77">        modelMapper.map(reservation, response);</span>
+
+<span class="nc" id="L79">        return response;</span>
+    }
+
+    @Transactional
+    public void cancelReservation(Long id) throws ReservationNotFoundException, SeatNoFoundException {
+<span class="nc" id="L84">        Optional&lt;ReservationModel&gt; reservationOptional = reservationRepository.findById(id);</span>
+<span class="nc bnc" id="L85" title="All 2 branches missed.">        if (reservationOptional.isEmpty()){</span>
+<span class="nc" id="L86">            throw new ReservationNotFoundException(String.format(&quot;Reservation %s not found&quot;, id));</span>
+        }
+<span class="nc" id="L88">        ReservationModel reservation = reservationOptional.get();</span>
+<span class="nc" id="L89">        reservation.setReservationStatus(ReservationStatus.CANCELLED);</span>
+<span class="nc" id="L90">        seatService.vacateSeat(reservation.getSeat().getId());</span>
+<span class="nc" id="L91">        reservationRepository.save(reservation);</span>
+<span class="nc" id="L92">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

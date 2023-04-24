@@ -1,6 +1,6 @@
 package com.fligth_booking.fligth_booking_backend.users;
 
-import com.fligth_booking.fligth_booking_backend.bookings.BookingModel;
+import com.fligth_booking.fligth_booking_backend.reservations.ReservationModel;
 import jakarta.persistence.*;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -35,7 +35,7 @@ public class UserModel {
     private String password;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<BookingModel> bookings = new ArrayList<>();
+    private List<ReservationModel> reservation = new ArrayList<>();
 
     @Column
     private Boolean status;

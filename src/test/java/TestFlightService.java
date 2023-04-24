@@ -3,6 +3,7 @@ import com.fligth_booking.fligth_booking_backend.exceptions.InvalidSeatKeyPatter
 import com.fligth_booking.fligth_booking_backend.flights.FlightModel;
 import com.fligth_booking.fligth_booking_backend.flights.FlightRepository;
 import com.fligth_booking.fligth_booking_backend.flights.FlightService;
+import com.fligth_booking.fligth_booking_backend.flights.flightDTOs.CreateFlightDTO;
 import com.fligth_booking.fligth_booking_backend.flights.flightDTOs.FlightBasicInfoDTO;
 import com.fligth_booking.fligth_booking_backend.seats.SeatModel;
 import com.fligth_booking.fligth_booking_backend.seats.SeatService;
@@ -72,6 +73,19 @@ public class TestFlightService {
         return flightTest;
     }
 
+    public CreateFlightDTO setupCreateFlightDTO(FlightModel flight){
+        String departure = "2023, 04, 22, 10, 30, 00, 00, UTC";
+        String arrival = "2023, 04, 22, 12, 30, 00, 00, UTC";
+        CreateFlightDTO createFlightDTO = new CreateFlightDTO();
+        createFlightDTO.setAirline(flight.getAirline());
+        createFlightDTO.setFlightCode(flight.getFlightCode());
+        createFlightDTO.setDeparture(departure);
+        createFlightDTO.setArrival(arrival);
+        createFlightDTO.setOriginAirportCode(flight.getOriginAirportCode());
+        createFlightDTO.setDestinationAirportCode(flight.getDestinationAirportCode());
+        return createFlightDTO;
+    }
+
     @Test
     public void testWhenNoExistFlightsReturnEmpty() {
 
@@ -124,9 +138,11 @@ public class TestFlightService {
         request.setRequestURI("/flights");
         RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
 
-        FlightModel flight = this.setupFlightModelToTest(1l);
 
-        URI uri = flightService.createFlight(flight);
+        FlightModel flight = this.setupFlightModelToTest(1l);
+        CreateFlightDTO createFlightDTO = this.setupCreateFlightDTO(flight);
+
+        URI uri = flightService.createFlight(createFlightDTO);
 
         URI expectedUri = URI.create("http://localhost/flights/" + flight.getId());
         assertEquals(expectedUri, uri);
@@ -140,7 +156,8 @@ public class TestFlightService {
         Mockito.doReturn("AIRLINE-AXFRG").when(flightService).createFlightCode("airline");
 
         FlightModel flight = this.setupFlightModelToTest(1l);
-        flightService.createFlight(flight);
+        CreateFlightDTO createFlightDTO = modelMapper.map(flight, CreateFlightDTO.class);
+        flightService.createFlight(createFlightDTO);
 
         assertTrue(flight.getStatus());
         assertEquals(LocalDate.of(2023, 04, 18), flight.getDepartureDate());
@@ -296,11 +313,10 @@ public class TestFlightService {
 
     @Test
     public void testIsValidateKeyPattern() {
-        assertTrue(flightService.isValidateKeyPattern("ABC-123-DEF"));
-        assertTrue(flightService.isValidateKeyPattern("A-1-BC"));
-        assertFalse(flightService.isValidateKeyPattern("ABC--DEF"));
-        assertFalse(flightService.isValidateKeyPattern("12-123-def"));
-        assertFalse(flightService.isValidateKeyPattern("A-BC-123"));
-        assertFalse(flightService.isValidateKeyPattern("AB-1C-DE"));
+        assertTrue(flightService.isValidateKeyPattern("A1"));
+        assertTrue(flightService.isValidateKeyPattern("B6"));
+        assertFalse(flightService.isValidateKeyPattern("12Q"));
+        assertFalse(flightService.isValidateKeyPattern("133"));
+        assertFalse(flightService.isValidateKeyPattern("--qq12"));
     }
 }

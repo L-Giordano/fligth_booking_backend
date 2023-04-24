@@ -2,11 +2,13 @@ package com.fligth_booking.fligth_booking_backend.flights;
 
 import com.fligth_booking.fligth_booking_backend.exceptions.FlightIdNotFoundException;
 import com.fligth_booking.fligth_booking_backend.exceptions.InvalidSeatKeyPatternException;
+import com.fligth_booking.fligth_booking_backend.flights.flightDTOs.CreateFlightDTO;
 import com.fligth_booking.fligth_booking_backend.flights.flightDTOs.FlightBasicInfoDTO;
 import com.fligth_booking.fligth_booking_backend.seats.SeatModel;
 import com.fligth_booking.fligth_booking_backend.seats.SeatService;
 import com.fligth_booking.fligth_booking_backend.seats.SeatStatus;
 import com.fligth_booking.fligth_booking_backend.seats.SeatType;
+import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -18,9 +20,13 @@ import org.springframework.data.domain.Pageable;
 
 import java.net.URI;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Service
+@Slf4j
 public class FlightService {
 
     @Autowired
@@ -54,7 +60,10 @@ public class FlightService {
     }
 
     @Transactional
-    public URI createFlight(FlightModel flightModel){
+    public URI createFlight(CreateFlightDTO createFlightDTO){
+        FlightModel flightModel = modelMapper.map(createFlightDTO, FlightModel.class);
+        flightModel.setDeparture(this.createZoneDateTime(createFlightDTO.getDeparture()));
+        flightModel.setArrival(this.createZoneDateTime(createFlightDTO.getArrival()));
         flightModel.setStatus(Boolean.TRUE);
         flightModel.setDepartureDate(flightModel.getDeparture().toLocalDate());
         flightModel.setArrivalDate(flightModel.getArrival().toLocalDate());
@@ -64,6 +73,13 @@ public class FlightService {
                 .path("/{id}")
                 .buildAndExpand(flightModel.getId())
                 .toUri();
+    }
+
+    public ZonedDateTime createZoneDateTime(String date){
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy, MM, dd, HH, mm, ss, SS, zzz");
+        ZonedDateTime zonedDateTime = ZonedDateTime.parse(date, formatter);
+        return zonedDateTime.withZoneSameInstant(ZoneOffset.UTC);
+
     }
 
     public String createFlightCode(String airline){
@@ -159,7 +175,7 @@ public class FlightService {
     }
 
     public Boolean isValidateKeyPattern(String key){
-        String pattern = "^[A-Z]+-\\d+-[A-Z\\s]+$";
+        String pattern = "^[A-Z]+\\d+$";
         return key.matches(pattern);
     }
 
