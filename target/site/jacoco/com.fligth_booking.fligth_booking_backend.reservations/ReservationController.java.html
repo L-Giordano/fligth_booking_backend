@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReservationController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">backend</a> &gt; <a href="index.source.html" class="el_package">com.fligth_booking.fligth_booking_backend.reservations</a> &gt; <span class="el_source">ReservationController.java</span></div><h1>ReservationController.java</h1><pre class="source lang-java linenums">package com.fligth_booking.fligth_booking_backend.reservations;
+
+import com.fligth_booking.fligth_booking_backend.exceptions.FlightIdNotFoundException;
+import com.fligth_booking.fligth_booking_backend.exceptions.ReservationNotFoundException;
+import com.fligth_booking.fligth_booking_backend.exceptions.SeatNoFoundException;
+import com.fligth_booking.fligth_booking_backend.reservations.reservationsDTOs.ReservationInfoDto;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.net.URI;
+
+@RestController
+@RequestMapping(&quot;/reservations&quot;)
+<span class="nc" id="L16">public class ReservationController {</span>
+
+    @Autowired
+    ReservationService reservationService;
+
+    @PostMapping
+    public ResponseEntity&lt;Object&gt; postReservation(@RequestBody ReservationModel reservationModel){
+        try {
+<span class="nc" id="L24">            URI uri = reservationService.createReservation(reservationModel);</span>
+<span class="nc" id="L25">            return ResponseEntity.created(uri).build();</span>
+<span class="nc" id="L26">        }catch (Exception e) {</span>
+<span class="nc" id="L27">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());</span>
+        }
+    }
+
+    @GetMapping(&quot;/getReservationByCode&quot;)
+    public ResponseEntity&lt;Object&gt; getReservationByCode(
+            @RequestParam(&quot;reservation&quot;) String reservationCode,
+            @RequestParam(&quot;id&quot;) Long id) {
+        try {
+<span class="nc" id="L36">            ReservationInfoDto response = reservationService.getReservationByCode(id, reservationCode);</span>
+<span class="nc" id="L37">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L38">        }catch (ReservationNotFoundException e) {</span>
+<span class="nc" id="L39">            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());</span>
+<span class="nc" id="L40">        }catch (Exception e) {</span>
+<span class="nc" id="L41">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());</span>
+        }
+    }
+
+    @PutMapping(&quot;/{id}/cancel&quot;)
+    public ResponseEntity&lt;Object&gt; cancelReservation(@PathVariable Long id){
+        try {
+<span class="nc" id="L48">            reservationService.cancelReservation(id);</span>
+<span class="nc" id="L49">            return ResponseEntity.noContent().build();</span>
+<span class="nc" id="L50">        }catch (ReservationNotFoundException e){</span>
+<span class="nc" id="L51">            return ResponseEntity.badRequest().body(e.getMessage());</span>
+<span class="nc" id="L52">        }catch (SeatNoFoundException e){</span>
+<span class="nc" id="L53">            return ResponseEntity.badRequest().body(e.getMessage());</span>
+<span class="nc" id="L54">        }catch (Exception e) {</span>
+<span class="nc" id="L55">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());</span>
+        }
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

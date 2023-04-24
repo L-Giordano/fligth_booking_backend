@@ -2,6 +2,7 @@ package com.fligth_booking.fligth_booking_backend.flights;
 
 import com.fligth_booking.fligth_booking_backend.exceptions.FlightIdNotFoundException;
 import com.fligth_booking.fligth_booking_backend.exceptions.InvalidSeatKeyPatternException;
+import com.fligth_booking.fligth_booking_backend.flights.flightDTOs.CreateFlightDTO;
 import com.fligth_booking.fligth_booking_backend.flights.flightDTOs.FlightBasicInfoDTO;
 import com.fligth_booking.fligth_booking_backend.seats.SeatModel;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -90,10 +91,10 @@ public class FlightController {
     }
 
     @PostMapping
-    public ResponseEntity<Object> createUser(@RequestBody FlightModel flightModel){
+    public ResponseEntity<Object> createFlight(@RequestBody CreateFlightDTO createFlightDTO){
         //TODO:crear asientos, verificar que el vuelo no tenga id asignada
         try {
-            URI uri = flightService.createFlight(flightModel);
+            URI uri = flightService.createFlight(createFlightDTO);
             return ResponseEntity.created(uri).build();
         }catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
@@ -109,9 +110,9 @@ public class FlightController {
             flightService.createSeats(id, seats);
             return ResponseEntity.ok().build();
         }catch (FlightIdNotFoundException e){
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         }catch (InvalidSeatKeyPatternException e){
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }

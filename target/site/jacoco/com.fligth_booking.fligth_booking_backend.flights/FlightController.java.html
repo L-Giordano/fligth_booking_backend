@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FlightController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">backend</a> &gt; <a href="index.source.html" class="el_package">com.fligth_booking.fligth_booking_backend.flights</a> &gt; <span class="el_source">FlightController.java</span></div><h1>FlightController.java</h1><pre class="source lang-java linenums">package com.fligth_booking.fligth_booking_backend.flights;
+
+import com.fligth_booking.fligth_booking_backend.exceptions.FlightIdNotFoundException;
+import com.fligth_booking.fligth_booking_backend.exceptions.InvalidSeatKeyPatternException;
+import com.fligth_booking.fligth_booking_backend.flights.flightDTOs.CreateFlightDTO;
+import com.fligth_booking.fligth_booking_backend.flights.flightDTOs.FlightBasicInfoDTO;
+import com.fligth_booking.fligth_booking_backend.seats.SeatModel;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.net.URI;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+
+@RestController
+@RequestMapping(&quot;/flights&quot;)
+<span class="nc" id="L22">public class FlightController {</span>
+
+    @Autowired
+    FlightService flightService;
+
+    @GetMapping
+    public ResponseEntity&lt;Object&gt; getAllFlight(){
+        try {
+<span class="nc" id="L30">            List&lt;FlightBasicInfoDTO&gt; response = flightService.allActiveFlights();</span>
+<span class="nc bnc" id="L31" title="All 2 branches missed.">            if (response.isEmpty()){</span>
+<span class="nc" id="L32">                return ResponseEntity.notFound().build();</span>
+            }
+<span class="nc" id="L34">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L35">        }catch (Exception e) {</span>
+<span class="nc" id="L36">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());</span>
+        }
+    }
+
+    @GetMapping(&quot;/{id}&quot;)
+    public ResponseEntity&lt;Object&gt; getFlightById(@PathVariable Long id){
+        try {
+<span class="nc" id="L43">            FlightBasicInfoDTO flightResponse = flightService.getActiveFlightById(id);</span>
+<span class="nc" id="L44">            return ResponseEntity.ok(flightResponse);</span>
+<span class="nc" id="L45">        }catch (FlightIdNotFoundException e){</span>
+<span class="nc" id="L46">            return ResponseEntity.badRequest().body(e.getMessage());</span>
+<span class="nc" id="L47">        }catch (Exception e) {</span>
+<span class="nc" id="L48">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());</span>
+        }
+    }
+
+    @GetMapping(&quot;/byDepartureAndArrival&quot;)
+    public ResponseEntity&lt;Object&gt; getFlightsByDepartureAndArrival(
+            @RequestParam(&quot;arrival&quot;)LocalDate arrival,
+            @RequestParam(&quot;departure&quot;)LocalDate departure,
+            @RequestParam(&quot;destinationAirportCode&quot;) String destinationAirportCode,
+            @RequestParam(&quot;originAirportCode&quot;) String originAirportCode,
+            @RequestParam(value = &quot;pagSize&quot;, required = false, defaultValue = &quot;10&quot;) Integer pageSize,
+            @RequestParam(value = &quot;pagNum&quot;, required = false, defaultValue = &quot;0&quot;) Integer pageNum,
+            @RequestParam(value = &quot;status&quot;, required = false, defaultValue = &quot;true&quot;) Boolean status
+            )
+    {
+        try {
+<span class="nc" id="L64">            Page&lt;FlightModel&gt; response = flightService.allFlightsByDepartureArrival(</span>
+                    pageNum,
+                    pageSize,
+                    originAirportCode,
+                    destinationAirportCode,
+                    departure,
+                    arrival,
+                    status);
+<span class="nc bnc" id="L72" title="All 2 branches missed.">            if (response.isEmpty()){</span>
+<span class="nc" id="L73">                return ResponseEntity.status(HttpStatus.NOT_FOUND).build();</span>
+            }
+<span class="nc" id="L75">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L76">        }catch (Exception e) {</span>
+<span class="nc" id="L77">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());</span>
+        }
+
+    }
+
+    @GetMapping(&quot;/{id}/getSeats&quot;)
+    public ResponseEntity&lt;Object&gt; getAllSeats(@PathVariable Long id) {
+        try{
+<span class="nc" id="L85">            List&lt;SeatModel&gt; response = flightService.allSeats(id);</span>
+
+<span class="nc" id="L87">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L88">        }catch (Exception e) {</span>
+<span class="nc" id="L89">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());</span>
+        }
+    }
+
+    @PostMapping
+    public ResponseEntity&lt;Object&gt; createFlight(@RequestBody CreateFlightDTO createFlightDTO){
+        //TODO:crear asientos, verificar que el vuelo no tenga id asignada
+        try {
+<span class="nc" id="L97">            URI uri = flightService.createFlight(createFlightDTO);</span>
+<span class="nc" id="L98">            return ResponseEntity.created(uri).build();</span>
+<span class="nc" id="L99">        }catch (Exception e) {</span>
+<span class="nc" id="L100">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());</span>
+        }
+    }
+
+    @PostMapping(&quot;/{id}/createFlightSeats&quot;)
+    public ResponseEntity&lt;Object&gt; createFlightSeats(
+            @PathVariable Long id,
+            @RequestBody HashMap&lt;String, ArrayList&lt;String&gt;&gt; seats)
+    {
+        try{
+<span class="nc" id="L110">            flightService.createSeats(id, seats);</span>
+<span class="nc" id="L111">            return ResponseEntity.ok().build();</span>
+<span class="nc" id="L112">        }catch (FlightIdNotFoundException e){</span>
+<span class="nc" id="L113">            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());</span>
+<span class="nc" id="L114">        }catch (InvalidSeatKeyPatternException e){</span>
+<span class="nc" id="L115">            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());</span>
+<span class="nc" id="L116">        }catch (Exception e) {</span>
+<span class="nc" id="L117">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());</span>
+        }
+    }
+
+    @PutMapping(&quot;/edit&quot;)
+    public ResponseEntity&lt;Object&gt; updateUser(@RequestBody FlightModel flightModel){
+        try {
+<span class="nc" id="L124">            flightService.updateFlight(flightModel);</span>
+<span class="nc" id="L125">            return ResponseEntity.noContent().build();</span>
+<span class="nc" id="L126">        }catch (FlightIdNotFoundException e){</span>
+<span class="nc" id="L127">            return ResponseEntity.badRequest().body(e.getMessage());</span>
+<span class="nc" id="L128">        }catch (Exception e) {</span>
+<span class="nc" id="L129">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());</span>
+        }
+    }
+    @DeleteMapping(&quot;/{id}&quot;)
+    public ResponseEntity&lt;Object&gt; deleteUser(@PathVariable Long id){
+        try {
+<span class="nc" id="L135">            flightService.deleteFlight(id);</span>
+<span class="nc" id="L136">            return ResponseEntity.noContent().build();</span>
+<span class="nc" id="L137">        }catch (FlightIdNotFoundException e){</span>
+<span class="nc" id="L138">            return ResponseEntity.badRequest().body(e.getMessage());</span>
+<span class="nc" id="L139">        }catch (Exception e) {</span>
+<span class="nc" id="L140">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());</span>
+        }
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>
